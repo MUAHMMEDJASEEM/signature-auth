@@ -34,45 +34,52 @@ const SignaturePad = () => {
 
     if (points.current.length > 0) {
       const lastPoint = points.current[points.current.length - 1];
-      const timeDiff = performance.now() - startTime.current - lastPoint.time;
-      manhattanTime.current += Math.abs(timeDiff);
-    }
+      const segmentDist = Math.sqrt(
+        Math.pow(x - lastPoint.x, 2) + Math.pow(y - lastPoint.y, 2)
+      );
+      totalDistance.current += segmentDist;
 
-    points.current.push({ x, y, time: performance.now() - startTime.current });
+      if (segmentDist > 1) {
+        points.current.push({ x, y, time: performance.now() - startTime.current });
+      }
+    } else {
+      points.current.push({ x, y, time: performance.now() - startTime.current });
+    }
   };
 
   const handleEnd = () => {
     const endTime = performance.now();
     setDrawingTime((endTime - startTime.current).toFixed(2));
     setDrawingDistance(totalDistance.current.toFixed(2));
-    setManhattanPercentage(((manhattanTime.current / drawingTime) * 100).toFixed(2));
-
-    if (savedDistance > 0) {
-      setRelativeManhattanTimePercentage(((manhattanTime.current / savedDistance) * 100).toFixed(2));
-    }
 
     if (points.current.length > 0) {
       const totalDist = totalDistance.current;
       let coveredDist = 0;
       const timeIntervals = [];
       const absTimestamps = [];
-      let nextThreshold = totalDist * 0.05;
+      let nextThreshold = totalDist * 0.2;
       let lastTime = 0;
 
       for (let i = 1; i < points.current.length; i++) {
-        coveredDist += Math.sqrt(
+        const segmentDist = Math.sqrt(
           Math.pow(points.current[i].x - points.current[i - 1].x, 2) +
           Math.pow(points.current[i].y - points.current[i - 1].y, 2)
         );
+        coveredDist += segmentDist;
 
-        if (coveredDist >= nextThreshold) {
+        while (coveredDist >= nextThreshold) {
           const timeDiff = points.current[i].time - lastTime;
           timeIntervals.push(timeDiff.toFixed(2));
           absTimestamps.push(points.current[i].time.toFixed(2));
           lastTime = points.current[i].time;
-          nextThreshold += totalDist * 0.05;
+          nextThreshold += totalDist * 0.2;
         }
       }
+
+      // Ensure the last interval is included
+      const lastInterval = (endTime - startTime.current - lastTime).toFixed(2);
+      timeIntervals.push(lastInterval);
+      absTimestamps.push((endTime - startTime.current).toFixed(2));
 
       setIntervals(timeIntervals);
       setTimestamps(absTimestamps);
@@ -94,7 +101,7 @@ const SignaturePad = () => {
 
   const handleSave = () => {
     setSavedIntervals(intervals);
-    setSavedDistance(drawingTime);
+    setSavedDistance(drawingDistance);
     setSavedManhattanTime(manhattanTime.current);
   };
 
@@ -142,12 +149,11 @@ const SignaturePad = () => {
       <div>
         <h3>Black Pixels Count: {blackPixelCount}</h3>
         <h3>Total Drawing Time: {drawingTime} ms</h3>
-        <h3>Manhattan Time / Total Time * 100: {manhattanPercentage}%</h3>
-        <h3>Relative Manhattan Time / Saved Time * 100: {relativeManhattanTimePercentage}%</h3>
-        <h3>Time Intervals Between Each 5%: {intervals.join(', ')} ms</h3>
-        <h3>Absolute Timestamps at Each 5%: {timestamps.join(', ')} ms</h3>
+        <h3>Drawing Distance: {drawingDistance} px</h3>
+        <h3>Time Intervals Between Each 20%: {intervals.join(', ')} ms</h3>
+        <h3>Absolute Timestamps at Each 20%: {timestamps.join(', ')} ms</h3>
         <h3>Saved Time Intervals: {savedIntervals.join(', ')} ms</h3>
-        <h3>Saved Total Time: {savedDistance} ms</h3>
+        <h3>Saved Total Distance: {savedDistance} px</h3>
         <h3>Saved Manhattan Time: {savedManhattanTime} ms</h3>
       </div>
     </div>
