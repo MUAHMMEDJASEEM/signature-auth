@@ -7,16 +7,15 @@ const SignaturePad = () => {
   const [drawingTime, setDrawingTime] = useState(0);
   const [drawingDistance, setDrawingDistance] = useState(0);
   const [intervals, setIntervals] = useState([]);
+  const [timestamps, setTimestamps] = useState([]);
   const startTime = useRef(null);
   const points = useRef([]);
   const totalDistance = useRef(0);
-  const pixelTimestamps = useRef([]);
 
   const handleBegin = () => {
     startTime.current = performance.now();
     points.current = [];
     totalDistance.current = 0;
-    pixelTimestamps.current = [];
   };
 
   const handleMove = (e) => {
@@ -34,8 +33,7 @@ const SignaturePad = () => {
       totalDistance.current += distance;
     }
 
-    points.current.push({ x, y });
-    pixelTimestamps.current.push(performance.now() - startTime.current);
+    points.current.push({ x, y, time: performance.now() - startTime.current });
   };
 
   const handleEnd = () => {
@@ -43,14 +41,30 @@ const SignaturePad = () => {
     setDrawingTime((endTime - startTime.current).toFixed(2));
     setDrawingDistance(totalDistance.current.toFixed(2));
 
-    if (pixelTimestamps.current.length > 0) {
-      const thresholds = [];
-      for (let i = 5; i <= 100; i += 5) {
-        thresholds.push(Math.floor((i / 100) * pixelTimestamps.current.length));
+    if (points.current.length > 0) {
+      const totalDist = totalDistance.current;
+      let coveredDist = 0;
+      const timeIntervals = [];
+      const absTimestamps = [];
+      let nextThreshold = totalDist * 0.05;
+      let lastTime = 0;
+
+      for (let i = 1; i < points.current.length; i++) {
+        const dx = points.current[i].x - points.current[i - 1].x;
+        const dy = points.current[i].y - points.current[i - 1].y;
+        coveredDist += Math.sqrt(dx * dx + dy * dy);
+
+        if (coveredDist >= nextThreshold) {
+          const timeDiff = points.current[i].time - lastTime;
+          timeIntervals.push(timeDiff.toFixed(2));
+          absTimestamps.push(points.current[i].time.toFixed(2));
+          lastTime = points.current[i].time;
+          nextThreshold += totalDist * 0.05;
+        }
       }
 
-      const timeIntervals = thresholds.map(index => pixelTimestamps.current[index] || pixelTimestamps.current[pixelTimestamps.current.length - 1]);
-      setIntervals(timeIntervals.map(t => t.toFixed(2)));
+      setIntervals(timeIntervals);
+      setTimestamps(absTimestamps);
     }
 
     const canvas = sigCanvas.current.getCanvas();
@@ -73,9 +87,9 @@ const SignaturePad = () => {
     setDrawingTime(0);
     setDrawingDistance(0);
     setIntervals([]);
+    setTimestamps([]);
     points.current = [];
     totalDistance.current = 0;
-    pixelTimestamps.current = [];
   };
 
   useEffect(() => {
@@ -102,7 +116,8 @@ const SignaturePad = () => {
         <h3>Black Pixels Count: {blackPixelCount}</h3>
         <h3>Total Drawing Time: {drawingTime} ms</h3>
         <h3>Total Drawing Distance: {drawingDistance} px</h3>
-        <h3>Time Intervals (5% Completion Steps): {intervals.join(', ')} ms</h3>
+        <h3>Time Intervals Between Each 5%: {intervals.join(', ')} ms</h3>
+        <h3>Absolute Timestamps at Each 5%: {timestamps.join(', ')} ms</h3>
       </div>
     </div>
   );
