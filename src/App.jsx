@@ -46,7 +46,7 @@ const SignaturePad = () => {
       let coveredDist = 0;
       const timeIntervals = [];
       const absTimestamps = [];
-      let nextThreshold = totalDist * 0.05;
+      let nextThreshold = totalDist * 0.2;
       let lastTime = 0;
 
       for (let i = 1; i < points.current.length; i++) {
@@ -59,7 +59,7 @@ const SignaturePad = () => {
           timeIntervals.push(timeDiff.toFixed(2));
           absTimestamps.push(points.current[i].time.toFixed(2));
           lastTime = points.current[i].time;
-          nextThreshold += totalDist * 0.05;
+          nextThreshold += totalDist * 0.2;
         }
       }
 
@@ -116,8 +116,8 @@ const SignaturePad = () => {
         <h3>Black Pixels Count: {blackPixelCount}</h3>
         <h3>Total Drawing Time: {drawingTime} ms</h3>
         <h3>Total Drawing Distance: {drawingDistance} px</h3>
-        <h3>Time Intervals Between Each 5%: {intervals.join(', ')} ms</h3>
-        <h3>Absolute Timestamps at Each 5%: {timestamps.join(', ')} ms</h3>
+        <h3>Time Intervals Between Each 20%: {intervals.join(', ')} ms</h3>
+        <h3>Absolute Timestamps at Each 20%: {timestamps.join(', ')} ms</h3>
       </div>
     </div>
   );
