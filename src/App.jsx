@@ -1,18 +1,19 @@
-import React, { useRef, useState, useEffect } from 'react';
-import SignatureCanvas from 'react-signature-canvas';
+import React, { useRef, useState, useEffect } from "react";
+import SignatureCanvas from "react-signature-canvas";
 
 const SignaturePad = () => {
   const sigCanvas = useRef(null);
   const [blackPixelCount, setBlackPixelCount] = useState(0);
   const [drawingTime, setDrawingTime] = useState(0);
   const [drawingDistance, setDrawingDistance] = useState(0);
-  const [manhattanPercentage, setManhattanPercentage] = useState(0);
   const [intervals, setIntervals] = useState([]);
   const [timestamps, setTimestamps] = useState([]);
   const [savedIntervals, setSavedIntervals] = useState([]);
   const [savedDistance, setSavedDistance] = useState(0);
   const [savedManhattanTime, setSavedManhattanTime] = useState(0);
-  const [relativeManhattanTimePercentage, setRelativeManhattanTimePercentage] = useState(0);
+  const [relativeManhattanTimePercentage, setRelativeManhattanTimePercentage] =
+    useState(0);
+
   const startTime = useRef(null);
   const points = useRef([]);
   const totalDistance = useRef(0);
@@ -26,7 +27,8 @@ const SignaturePad = () => {
   };
 
   const handleMove = (e) => {
-    if (e.buttons !== 1) return;
+    if (!startTime.current) return;
+
     const canvas = sigCanvas.current.getCanvas();
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -34,14 +36,22 @@ const SignaturePad = () => {
 
     if (points.current.length > 0) {
       const lastPoint = points.current[points.current.length - 1];
+
+      // Euclidean distance
       const segmentDist = Math.sqrt(
         Math.pow(x - lastPoint.x, 2) + Math.pow(y - lastPoint.y, 2)
       );
       totalDistance.current += segmentDist;
 
-      if (segmentDist > 1) {
-        points.current.push({ x, y, time: performance.now() - startTime.current });
-      }
+      // Manhattan distance
+      const manhattanDist = Math.abs(x - lastPoint.x) + Math.abs(y - lastPoint.y);
+      manhattanTime.current += manhattanDist;
+
+      points.current.push({
+        x,
+        y,
+        time: performance.now() - startTime.current,
+      });
     } else {
       points.current.push({ x, y, time: performance.now() - startTime.current });
     }
@@ -85,8 +95,9 @@ const SignaturePad = () => {
       setTimestamps(absTimestamps);
     }
 
+    // Count black pixels
     const canvas = sigCanvas.current.getCanvas();
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imageData.data;
 
@@ -103,14 +114,32 @@ const SignaturePad = () => {
     setSavedIntervals(intervals);
     setSavedDistance(drawingDistance);
     setSavedManhattanTime(manhattanTime.current);
-  };
 
+    if (savedIntervals.length === intervals.length && savedIntervals.length > 0) {
+      let diffSum = 0;
+      for (let i = 0; i < savedIntervals.length; i++) {
+        diffSum += Math.abs(parseFloat(savedIntervals[i]) - parseFloat(intervals[i]));
+      }
+      const totalSavedTime = savedIntervals.reduce((acc, val) => acc + parseFloat(val), 0);
+      const relativeTimePercentage = ((diffSum / totalSavedTime) * 100).toFixed(2);
+      setRelativeManhattanTimePercentage(relativeTimePercentage);
+    }
+  };
+  const handleCalculate = () => {
+    if (savedIntervals.length === intervals.length && savedIntervals.length > 0) {
+      let diffSum = 0;
+      for (let i = 0; i < savedIntervals.length; i++) {
+        diffSum += Math.abs(parseFloat(savedIntervals[i]) - parseFloat(intervals[i]));
+      }
+      const relativeTimePercentage = ((diffSum / savedIntervals.reduce((acc, val) => acc + parseFloat(val), 0)) * 100).toFixed(2);
+      setRelativeManhattanTimePercentage(relativeTimePercentage);
+    }
+  };
   const handleClear = () => {
     sigCanvas.current.clear();
     setBlackPixelCount(0);
     setDrawingTime(0);
     setDrawingDistance(0);
-    setManhattanPercentage(0);
     setRelativeManhattanTimePercentage(0);
     setIntervals([]);
     setTimestamps([]);
@@ -122,14 +151,14 @@ const SignaturePad = () => {
   useEffect(() => {
     if (sigCanvas.current) {
       const canvas = sigCanvas.current.getCanvas();
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext("2d");
       ctx.globalAlpha = 1;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.strokeStyle = 'black';
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "black";
       ctx.lineWidth = 2;
-      canvas.addEventListener('pointermove', handleMove);
-      return () => canvas.removeEventListener('pointermove', handleMove);
+      canvas.addEventListener("pointermove", handleMove);
+      return () => canvas.removeEventListener("pointermove", handleMove);
     }
   }, []);
 
@@ -138,23 +167,32 @@ const SignaturePad = () => {
       <SignatureCanvas
         ref={sigCanvas}
         penColor="black"
-        canvasProps={{ width: 500, height: 200, className: 'sigCanvas', style: { backgroundColor: 'white' } }}
+        canvasProps={{
+          width: 500,
+          height: 200,
+          className: "sigCanvas",
+          style: { backgroundColor: "white" },
+        }}
         onBegin={handleBegin}
         onEnd={handleEnd}
       />
       <div>
         <button onClick={handleClear}>Clear</button>
         <button onClick={handleSave}>Save</button>
+        <button onClick={handleCalculate}>Calculate</button>
       </div>
       <div>
         <h3>Black Pixels Count: {blackPixelCount}</h3>
         <h3>Total Drawing Time: {drawingTime} ms</h3>
         <h3>Drawing Distance: {drawingDistance} px</h3>
-        <h3>Time Intervals Between Each 20%: {intervals.join(', ')} ms</h3>
-        <h3>Absolute Timestamps at Each 20%: {timestamps.join(', ')} ms</h3>
-        <h3>Saved Time Intervals: {savedIntervals.join(', ')} ms</h3>
+        <h3>Time Intervals Between Each 20%: {intervals.join(", ")} ms</h3>
+        <h3>Absolute Timestamps at Each 20%: {timestamps.join(", ")} ms</h3>
+        <h3>Saved Time Intervals: {savedIntervals.join(", ")} ms</h3>
         <h3>Saved Total Distance: {savedDistance} px</h3>
         <h3>Saved Manhattan Time: {savedManhattanTime} ms</h3>
+        <h3>Relative Manhattan Time Percentage: {relativeManhattanTimePercentage} %</h3>
+        
+
       </div>
     </div>
   );
