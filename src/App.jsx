@@ -88,8 +88,8 @@ const SignaturePad = () => {
     <div>
       <SignatureCanvas
         ref={sigCanvas}
-        penColor="black"
-        canvasProps={{ width: 500, height: 200, className: "sigCanvas", style: { backgroundColor: "white" } }}
+        penColor="white"
+        canvasProps={{ width: 800, height: 400, className: "sigCanvas", style: { backgroundColor: "white" } }}
         onBegin={handleBegin}
         onEnd={handleEnd}
       />
