@@ -3,176 +3,93 @@ import SignatureCanvas from "react-signature-canvas";
 
 const SignaturePad = () => {
   const sigCanvas = useRef(null);
-  const [blackPixelCount, setBlackPixelCount] = useState(0);
-  const [drawingTime, setDrawingTime] = useState(0);
-  const [drawingDistance, setDrawingDistance] = useState(0);
-  const [intervals, setIntervals] = useState([]);
-  const [timestamps, setTimestamps] = useState([]);
-  const [savedIntervals, setSavedIntervals] = useState([]);
-  const [savedDistance, setSavedDistance] = useState(0);
-  const [savedManhattanTime, setSavedManhattanTime] = useState(0);
-  const [relativeManhattanTimePercentage, setRelativeManhattanTimePercentage] =
-    useState(0);
+  const [strokeTimes, setStrokeTimes] = useState([]);
+  const [strokeDistances, setStrokeDistances] = useState([]);
+  const [savedStrokeTimes, setSavedStrokeTimes] = useState([]);
+  const [savedStrokeDistances, setSavedStrokeDistances] = useState([]);
+  const [timeDifference, setTimeDifference] = useState(0);
+  const [distanceDifference, setDistanceDifference] = useState(0);
 
   const startTime = useRef(null);
-  const points = useRef([]);
+  const lastPoint = useRef(null);
   const totalDistance = useRef(0);
-  const manhattanTime = useRef(0);
+  const isDrawing = useRef(false);
+
+  useEffect(() => {
+    const canvas = sigCanvas.current.getCanvas();
+
+    const handleMove = (e) => {
+      if (!isDrawing.current) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.touches ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
+      const y = e.touches ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+      
+      if (lastPoint.current) {
+        const segmentDist = Math.sqrt(
+          Math.pow(x - lastPoint.current.x, 2) + Math.pow(y - lastPoint.current.y, 2)
+        );
+        totalDistance.current += segmentDist;
+      }
+      lastPoint.current = { x, y };
+    };
+
+    canvas.addEventListener("mousemove", handleMove);
+    canvas.addEventListener("touchmove", handleMove);
+    return () => {
+      canvas.removeEventListener("mousemove", handleMove);
+      canvas.removeEventListener("touchmove", handleMove);
+    };
+  }, []);
 
   const handleBegin = () => {
     startTime.current = performance.now();
-    points.current = [];
+    lastPoint.current = null;
     totalDistance.current = 0;
-    manhattanTime.current = 0;
-  };
-
-  const handleMove = (e) => {
-    if (!startTime.current) return;
-
-    const canvas = sigCanvas.current.getCanvas();
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    if (points.current.length > 0) {
-      const lastPoint = points.current[points.current.length - 1];
-
-      // Euclidean distance
-      const segmentDist = Math.sqrt(
-        Math.pow(x - lastPoint.x, 2) + Math.pow(y - lastPoint.y, 2)
-      );
-      totalDistance.current += segmentDist;
-
-      // Manhattan distance
-      const manhattanDist = Math.abs(x - lastPoint.x) + Math.abs(y - lastPoint.y);
-      manhattanTime.current += manhattanDist;
-
-      points.current.push({
-        x,
-        y,
-        time: performance.now() - startTime.current,
-      });
-    } else {
-      points.current.push({ x, y, time: performance.now() - startTime.current });
-    }
+    isDrawing.current = true;
   };
 
   const handleEnd = () => {
     const endTime = performance.now();
-    setDrawingTime((endTime - startTime.current).toFixed(2));
-    setDrawingDistance(totalDistance.current.toFixed(2));
-
-    if (points.current.length > 0) {
-      const totalDist = totalDistance.current;
-      let coveredDist = 0;
-      const timeIntervals = [];
-      const absTimestamps = [];
-      let nextThreshold = totalDist * 0.2;
-      let lastTime = 0;
-
-      for (let i = 1; i < points.current.length; i++) {
-        const segmentDist = Math.sqrt(
-          Math.pow(points.current[i].x - points.current[i - 1].x, 2) +
-          Math.pow(points.current[i].y - points.current[i - 1].y, 2)
-        );
-        coveredDist += segmentDist;
-
-        while (coveredDist >= nextThreshold) {
-          const timeDiff = points.current[i].time - lastTime;
-          timeIntervals.push(timeDiff.toFixed(2));
-          absTimestamps.push(points.current[i].time.toFixed(2));
-          lastTime = points.current[i].time;
-          nextThreshold += totalDist * 0.2;
-        }
-      }
-
-      // Ensure the last interval is included
-      const lastInterval = (endTime - startTime.current - lastTime).toFixed(2);
-      timeIntervals.push(lastInterval);
-      absTimestamps.push((endTime - startTime.current).toFixed(2));
-
-      setIntervals(timeIntervals);
-      setTimestamps(absTimestamps);
-    }
-
-    // Count black pixels
-    const canvas = sigCanvas.current.getCanvas();
-    const ctx = canvas.getContext("2d");
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-
-    let count = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      if (data[i] === 0 && data[i + 1] === 0 && data[i + 2] === 0 && data[i + 3] !== 0) {
-        count++;
-      }
-    }
-    setBlackPixelCount(count);
+    const strokeTime = (endTime - startTime.current).toFixed(2);
+    setStrokeTimes((prev) => [...prev, strokeTime]);
+    setStrokeDistances((prev) => [...prev, totalDistance.current.toFixed(2)]);
+    isDrawing.current = false;
   };
 
   const handleSave = () => {
-    setSavedIntervals(intervals);
-    setSavedDistance(drawingDistance);
-    setSavedManhattanTime(manhattanTime.current);
+    setSavedStrokeTimes([...strokeTimes]);
+    setSavedStrokeDistances([...strokeDistances]);
+  };
 
-    if (savedIntervals.length === intervals.length && savedIntervals.length > 0) {
-      let diffSum = 0;
-      for (let i = 0; i < savedIntervals.length; i++) {
-        diffSum += Math.abs(parseFloat(savedIntervals[i]) - parseFloat(intervals[i]));
-      }
-      const totalSavedTime = savedIntervals.reduce((acc, val) => acc + parseFloat(val), 0);
-      const relativeTimePercentage = ((diffSum / totalSavedTime) * 100).toFixed(2);
-      setRelativeManhattanTimePercentage(relativeTimePercentage);
-    }
-  };
   const handleCalculate = () => {
-    if (savedIntervals.length === intervals.length && savedIntervals.length > 0) {
-      let diffSum = 0;
-      for (let i = 0; i < savedIntervals.length; i++) {
-        diffSum += Math.abs(parseFloat(savedIntervals[i]) - parseFloat(intervals[i]));
+    if (savedStrokeTimes.length === strokeTimes.length && savedStrokeDistances.length === strokeDistances.length) {
+      let timeDiffSum = 0;
+      let distanceDiffSum = 0;
+      
+      for (let i = 0; i < savedStrokeTimes.length; i++) {
+        timeDiffSum += Math.abs(parseFloat(savedStrokeTimes[i]) - parseFloat(strokeTimes[i]));
+        distanceDiffSum += Math.abs(parseFloat(savedStrokeDistances[i]) - parseFloat(strokeDistances[i]));
       }
-      const relativeTimePercentage = ((diffSum / savedIntervals.reduce((acc, val) => acc + parseFloat(val), 0)) * 100).toFixed(2);
-      setRelativeManhattanTimePercentage(relativeTimePercentage);
+      
+      setTimeDifference(timeDiffSum.toFixed(2));
+      setDistanceDifference(distanceDiffSum.toFixed(2));
     }
   };
+
   const handleClear = () => {
     sigCanvas.current.clear();
-    setBlackPixelCount(0);
-    setDrawingTime(0);
-    setDrawingDistance(0);
-    setRelativeManhattanTimePercentage(0);
-    setIntervals([]);
-    setTimestamps([]);
-    points.current = [];
-    totalDistance.current = 0;
-    manhattanTime.current = 0;
+    setStrokeTimes([]);
+    setStrokeDistances([]);
+    setTimeDifference(0);
+    setDistanceDifference(0);
   };
-
-  useEffect(() => {
-    if (sigCanvas.current) {
-      const canvas = sigCanvas.current.getCanvas();
-      const ctx = canvas.getContext("2d");
-      ctx.globalAlpha = 1;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      ctx.strokeStyle = "black";
-      ctx.lineWidth = 2;
-      canvas.addEventListener("pointermove", handleMove);
-      return () => canvas.removeEventListener("pointermove", handleMove);
-    }
-  }, []);
 
   return (
     <div>
       <SignatureCanvas
         ref={sigCanvas}
         penColor="black"
-        canvasProps={{
-          width: 500,
-          height: 200,
-          className: "sigCanvas",
-          style: { backgroundColor: "white" },
-        }}
+        canvasProps={{ width: 500, height: 200, className: "sigCanvas", style: { backgroundColor: "white" } }}
         onBegin={handleBegin}
         onEnd={handleEnd}
       />
@@ -182,17 +99,12 @@ const SignaturePad = () => {
         <button onClick={handleCalculate}>Calculate</button>
       </div>
       <div>
-        <h3>Black Pixels Count: {blackPixelCount}</h3>
-        <h3>Total Drawing Time: {drawingTime} ms</h3>
-        <h3>Drawing Distance: {drawingDistance} px</h3>
-        <h3>Time Intervals Between Each 20%: {intervals.join(", ")} ms</h3>
-        <h3>Absolute Timestamps at Each 20%: {timestamps.join(", ")} ms</h3>
-        <h3>Saved Time Intervals: {savedIntervals.join(", ")} ms</h3>
-        <h3>Saved Total Distance: {savedDistance} px</h3>
-        <h3>Saved Manhattan Time: {savedManhattanTime} ms</h3>
-        <h3>Relative Manhattan Time Percentage: {relativeManhattanTimePercentage} %</h3>
-        
-
+        <h3>Stroke Times: {strokeTimes.join(", ")} ms</h3>
+        <h3>Stroke Distances: {strokeDistances.join(", ")} px</h3>
+        <h3>Saved Stroke Times: {savedStrokeTimes.join(", ")} ms</h3>
+        <h3>Saved Stroke Distances: {savedStrokeDistances.join(", ")} px</h3>
+        <h3>Time Difference: {timeDifference} ms</h3>
+        <h3>Distance Difference: {distanceDifference} px</h3>
       </div>
     </div>
   );
