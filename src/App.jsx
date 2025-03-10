@@ -18,30 +18,28 @@ const SignaturePad = () => {
   const lastPoint = useRef(null);
   const totalDistance = useRef(0);
   const isDrawing = useRef(false);
-  useEffect(() => {
+  const drawGrid = () => {
     const canvas = sigCanvas.current.getCanvas();
     const ctx = canvas.getContext("2d");
+    const gridSize = 50; // Set grid size
+    ctx.strokeStyle = "#ddd"; // Light gray color for grid lines
+    ctx.lineWidth = 0.5;
 
-    // Draw grid
-    const drawGrid = () => {
-      const gridSize = 50; // Set grid size
-      ctx.strokeStyle = "#ddd"; // Light gray color for grid lines
-      ctx.lineWidth = 0.5;
+    for (let x = 0; x < canvas.width; x += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvas.height);
+      ctx.stroke();
+    }
+    for (let y = 0; y < canvas.height; y += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvas.width, y);
+      ctx.stroke();
+    }
+  };
 
-      for (let x = 0; x < canvas.width; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
-        ctx.stroke();
-      }
-      for (let y = 0; y < canvas.height; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
-      }
-    };
-
+  useEffect(() => {
     drawGrid();
   }, []);
   useEffect(() => {
@@ -132,6 +130,7 @@ const SignaturePad = () => {
 
   const handleClear = () => {
     sigCanvas.current.clear();
+    drawGrid();
     setStrokeTimes([]);
     setStrokeDistances([]);
     setTimeDifferences([]);
