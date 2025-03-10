@@ -11,6 +11,8 @@ const SignaturePad = () => {
   const [medianStrokeDistances, setMedianStrokeDistances] = useState([]);
   const [timeDifferences, setTimeDifferences] = useState([]);
   const [distanceDifferences, setDistanceDifferences] = useState([]);
+  const [relativeTimeDifference, setRelativeTimeDifference] = useState(0);
+  const [relativeDistanceDifference, setRelativeDistanceDifference] = useState(0);
 
   const startTime = useRef(null);
   const lastPoint = useRef(null);
@@ -90,6 +92,14 @@ const SignaturePad = () => {
       const distanceDiffs = strokeDistances.map((dist, i) => Math.abs(dist - medianStrokeDistances[i]).toFixed(2));
       setTimeDifferences(timeDiffs);
       setDistanceDifferences(distanceDiffs);
+      
+      const totalTimeDifference = timeDiffs.reduce((sum, val) => sum + parseFloat(val), 0);
+      const totalDistanceDifference = distanceDiffs.reduce((sum, val) => sum + parseFloat(val), 0);
+      const totalMedianTime = medianStrokeTimes.reduce((sum, val) => sum + val, 0);
+      const totalMedianDistance = medianStrokeDistances.reduce((sum, val) => sum + val, 0);
+      
+      setRelativeTimeDifference(((totalTimeDifference / totalMedianTime) * 100).toFixed(2));
+      setRelativeDistanceDifference(((totalDistanceDifference / totalMedianDistance) * 100).toFixed(2));
     }
   };
 
@@ -124,6 +134,8 @@ const SignaturePad = () => {
         <h3>Median Stroke Distances: {medianStrokeDistances.join(", ")} px</h3>
         <h3>Time Differences: {timeDifferences.join(", ")} ms</h3>
         <h3>Distance Differences: {distanceDifferences.join(", ")} px</h3>
+        <h3>Relative Time Difference: {relativeTimeDifference}%</h3>
+        <h3>Relative Distance Difference: {relativeDistanceDifference}%</h3>
       </div>
     </div>
   );
