@@ -7,8 +7,10 @@ const SignaturePad = () => {
   const [strokeDistances, setStrokeDistances] = useState([]);
   const [savedStrokeTimes, setSavedStrokeTimes] = useState([]);
   const [savedStrokeDistances, setSavedStrokeDistances] = useState([]);
-  const [timeDifference, setTimeDifference] = useState(0);
-  const [distanceDifference, setDistanceDifference] = useState(0);
+  const [medianStrokeTimes, setMedianStrokeTimes] = useState([]);
+  const [medianStrokeDistances, setMedianStrokeDistances] = useState([]);
+  const [timeDifferences, setTimeDifferences] = useState([]);
+  const [distanceDifferences, setDistanceDifferences] = useState([]);
 
   const startTime = useRef(null);
   const lastPoint = useRef(null);
@@ -50,29 +52,44 @@ const SignaturePad = () => {
 
   const handleEnd = () => {
     const endTime = performance.now();
-    const strokeTime = (endTime - startTime.current).toFixed(2);
+    const strokeTime = parseFloat((endTime - startTime.current).toFixed(2));
+    const strokeDistance = parseFloat(totalDistance.current.toFixed(2));
+    
     setStrokeTimes((prev) => [...prev, strokeTime]);
-    setStrokeDistances((prev) => [...prev, totalDistance.current.toFixed(2)]);
+    setStrokeDistances((prev) => [...prev, strokeDistance]);
+    
     isDrawing.current = false;
   };
 
+  const calculateMedian = (arr) => {
+    if (arr.length === 0) return 0;
+    const sorted = [...arr].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  };
+
   const handleSave = () => {
-    setSavedStrokeTimes([...strokeTimes]);
-    setSavedStrokeDistances([...strokeDistances]);
+    if (strokeTimes.length > 0) {
+      const updatedTimes = [...savedStrokeTimes, strokeTimes].slice(-5);
+      const updatedDistances = [...savedStrokeDistances, strokeDistances].slice(-5);
+      setSavedStrokeTimes(updatedTimes);
+      setSavedStrokeDistances(updatedDistances);
+      
+      if (updatedTimes.length === 5) {
+        const medianTimes = updatedTimes[0].map((_, i) => calculateMedian(updatedTimes.map(stroke => stroke[i])));
+        const medianDistances = updatedDistances[0].map((_, i) => calculateMedian(updatedDistances.map(stroke => stroke[i])));
+        setMedianStrokeTimes(medianTimes);
+        setMedianStrokeDistances(medianDistances);
+      }
+    }
   };
 
   const handleCalculate = () => {
-    if (savedStrokeTimes.length === strokeTimes.length && savedStrokeDistances.length === strokeDistances.length) {
-      let timeDiffSum = 0;
-      let distanceDiffSum = 0;
-      
-      for (let i = 0; i < savedStrokeTimes.length; i++) {
-        timeDiffSum += Math.abs(parseFloat(savedStrokeTimes[i]) - parseFloat(strokeTimes[i]));
-        distanceDiffSum += Math.abs(parseFloat(savedStrokeDistances[i]) - parseFloat(strokeDistances[i]));
-      }
-      
-      setTimeDifference(timeDiffSum.toFixed(2));
-      setDistanceDifference(distanceDiffSum.toFixed(2));
+    if (medianStrokeTimes.length && medianStrokeDistances.length) {
+      const timeDiffs = strokeTimes.map((time, i) => Math.abs(time - medianStrokeTimes[i]).toFixed(2));
+      const distanceDiffs = strokeDistances.map((dist, i) => Math.abs(dist - medianStrokeDistances[i]).toFixed(2));
+      setTimeDifferences(timeDiffs);
+      setDistanceDifferences(distanceDiffs);
     }
   };
 
@@ -80,15 +97,15 @@ const SignaturePad = () => {
     sigCanvas.current.clear();
     setStrokeTimes([]);
     setStrokeDistances([]);
-    setTimeDifference(0);
-    setDistanceDifference(0);
+    setTimeDifferences([]);
+    setDistanceDifferences([]);
   };
 
   return (
     <div>
       <SignatureCanvas
         ref={sigCanvas}
-        penColor="white"
+        penColor="black"
         canvasProps={{ width: 800, height: 400, className: "sigCanvas", style: { backgroundColor: "white" } }}
         onBegin={handleBegin}
         onEnd={handleEnd}
@@ -96,15 +113,17 @@ const SignaturePad = () => {
       <div>
         <button onClick={handleClear}>Clear</button>
         <button onClick={handleSave}>Save</button>
-        <button onClick={handleCalculate}>Calculate</button>
+        <button onClick={handleCalculate}>Compare</button>
       </div>
       <div>
         <h3>Stroke Times: {strokeTimes.join(", ")} ms</h3>
         <h3>Stroke Distances: {strokeDistances.join(", ")} px</h3>
-        <h3>Saved Stroke Times: {savedStrokeTimes.join(", ")} ms</h3>
-        <h3>Saved Stroke Distances: {savedStrokeDistances.join(", ")} px</h3>
-        <h3>Time Difference: {timeDifference} ms</h3>
-        <h3>Distance Difference: {distanceDifference} px</h3>
+        <h3>Saved Stroke Times: {JSON.stringify(savedStrokeTimes)}</h3>
+        <h3>Saved Stroke Distances: {JSON.stringify(savedStrokeDistances)}</h3>
+        <h3>Median Stroke Times: {medianStrokeTimes.join(", ")} ms</h3>
+        <h3>Median Stroke Distances: {medianStrokeDistances.join(", ")} px</h3>
+        <h3>Time Differences: {timeDifferences.join(", ")} ms</h3>
+        <h3>Distance Differences: {distanceDifferences.join(", ")} px</h3>
       </div>
     </div>
   );
