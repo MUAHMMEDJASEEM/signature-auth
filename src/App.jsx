@@ -18,9 +18,36 @@ const SignaturePad = () => {
   const lastPoint = useRef(null);
   const totalDistance = useRef(0);
   const isDrawing = useRef(false);
-
   useEffect(() => {
     const canvas = sigCanvas.current.getCanvas();
+    const ctx = canvas.getContext("2d");
+
+    // Draw grid
+    const drawGrid = () => {
+      const gridSize = 50; // Set grid size
+      ctx.strokeStyle = "#ddd"; // Light gray color for grid lines
+      ctx.lineWidth = 0.5;
+
+      for (let x = 0; x < canvas.width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+    };
+
+    drawGrid();
+  }, []);
+  useEffect(() => {
+    const canvas = sigCanvas.current.getCanvas();
+
+    
 
     const handleMove = (e) => {
       if (!isDrawing.current) return;
@@ -92,7 +119,7 @@ const SignaturePad = () => {
       const distanceDiffs = strokeDistances.map((dist, i) => Math.abs(dist - medianStrokeDistances[i]).toFixed(2));
       setTimeDifferences(timeDiffs);
       setDistanceDifferences(distanceDiffs);
-      
+
       const totalTimeDifference = timeDiffs.reduce((sum, val) => sum + parseFloat(val), 0);
       const totalDistanceDifference = distanceDiffs.reduce((sum, val) => sum + parseFloat(val), 0);
       const totalMedianTime = medianStrokeTimes.reduce((sum, val) => sum + val, 0);
