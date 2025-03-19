@@ -111,7 +111,7 @@ const SignaturePad = () => {
       if (updatedTimes.length === 5) {
         const medianTimes = updatedTimes[0].map((_, i) => calculateMedian(updatedTimes.map(stroke => stroke[i])));
         let medianDistances = updatedDistances[0].map((_, i) => calculateMedian(updatedDistances.map(stroke => stroke[i])));
-        
+
         // Normalize the median distances
         medianDistances = normalizeMedianDistances(medianDistances);
 
@@ -130,19 +130,19 @@ const SignaturePad = () => {
       const totalNewDistance = strokeDistances.reduce((sum, val) => sum + val, 0);
       const normalizedStrokeDistances = strokeDistances.map(val => (val / totalNewDistance) * 10000);
 
-      const distanceDiffs = normalizedStrokeDistances.map((dist, i) => 
+      const distanceDiffs = normalizedStrokeDistances.map((dist, i) =>
         Math.abs(dist - medianStrokeDistances[i]).toFixed(2)
       );
 
       setDistanceDifferences(distanceDiffs);
 
       const totalDistanceDifference = distanceDiffs.reduce((sum, val) => sum + parseFloat(val), 0);
-      
+
       setRelativeDistanceDifference(((totalDistanceDifference / 10000) * 100).toFixed(2));
 
       // Calculate Relative Time Difference
       if (medianStrokeTimes.length > 0) {
-        const timeDiffs = strokeTimes.map((time, i) => 
+        const timeDiffs = strokeTimes.map((time, i) =>
           Math.abs(time - medianStrokeTimes[i]).toFixed(2)
         );
 
@@ -182,7 +182,7 @@ const SignaturePad = () => {
         <button onClick={handleCalculate}>Compare</button>
       </div>
       <div>
-      <h3>Stroke Times: {strokeTimes.join(", ")} ms</h3>
+        <h3>Stroke Times: {strokeTimes.join(", ")} ms</h3>
         <h3>Stroke Distances: {strokeDistances.join(", ")} px</h3>
         <h3>Saved Stroke Times: {JSON.stringify(savedStrokeTimes)}</h3>
         <h3>Saved Stroke Distances: {JSON.stringify(savedStrokeDistances)}</h3>
@@ -190,6 +190,15 @@ const SignaturePad = () => {
         <h3>Normanized Median Stroke Distances: {medianStrokeDistances.join(", ")} </h3>
         <h3>Relative Distance Difference: {relativeDistanceDifference}%</h3>
         <h3>Relative Time Difference: {relativeTimeDifference}%</h3>
+        {relativeDistanceDifference !== 0 && relativeTimeDifference !== 0 && (
+          <>
+            {relativeDistanceDifference < 10 && relativeTimeDifference < 10 ? (
+              <h2 style={{ color: "green" }}>✅ Accepted</h2>
+            ) : (
+              <h2 style={{ color: "red" }}>❌ Rejected</h2>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
