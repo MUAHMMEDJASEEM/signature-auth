@@ -180,6 +180,15 @@ const SignaturePad = () => {
         <button onClick={handleClear}>Clear</button>
         <button onClick={handleSave}>Save</button>
         <button onClick={handleCalculate}>Compare</button>
+        {relativeDistanceDifference !== 0 && relativeTimeDifference !== 0 && (
+          <>
+            {relativeDistanceDifference < 10 && relativeTimeDifference < 10 ? (
+              <h2 style={{ color: "green" }}>✅ Accepted</h2>
+            ) : (
+              <h2 style={{ color: "red" }}>❌ Rejected</h2>
+            )}
+          </>
+        )}
       </div>
       <div>
         <h3>Stroke Times: {strokeTimes.join(", ")} ms</h3>
@@ -190,15 +199,7 @@ const SignaturePad = () => {
         <h3>Normanized Median Stroke Distances: {medianStrokeDistances.join(", ")} </h3>
         <h3>Relative Distance Difference: {relativeDistanceDifference}%</h3>
         <h3>Relative Time Difference: {relativeTimeDifference}%</h3>
-        {relativeDistanceDifference !== 0 && relativeTimeDifference !== 0 && (
-          <>
-            {relativeDistanceDifference < 10 && relativeTimeDifference < 10 ? (
-              <h2 style={{ color: "green" }}>✅ Accepted</h2>
-            ) : (
-              <h2 style={{ color: "red" }}>❌ Rejected</h2>
-            )}
-          </>
-        )}
+        
       </div>
     </div>
   );
